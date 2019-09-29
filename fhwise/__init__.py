@@ -38,19 +38,19 @@ class FhwisePlayer:
                 recv = Message.parse(recv_raw)
                 if recv.cmdid == self._cmdid:
                     retval = recv.payload
-                    self._cmdid++
+                    self._cmdid += 1
                     return retval
                 else:
                     _LOGGER.warn('Received msg(%s) but id not match.' % (recv))
-            except expression as identifier:
+            except:
                 _LOGGER.error('Received invalid raw data(%s)' % (recv_raw))
 
-        self._cmdid++
+        self._cmdid += 1
         return b''
 
-    def send_heartbeat(self) -> bytes:
+    def send_heartbeat(self) -> str:
         """Return device model in UTF8"""
-        return self.send_raw_command(0xC0)
+        return self.send_raw_command(0xC0).decode('utf-8')
 
     def send_play_pause(self) -> bytes:
         return self.send_raw_command(0xC1)
@@ -61,11 +61,211 @@ class FhwisePlayer:
     def send_next_song(self) -> bytes:
         return self.send_raw_command(0xC3)
 
-    def get_play_mode(self) -> bytes:
+    def get_play_mode(self) -> int:
         """
         00 00 00 00 seq play
         01 00 00 00 repeat all
         02 00 00 00 repeat single
         03 00 00 00 radom play
         """
-        return self.send_raw_command(0xC4, b'\x30')
+        return int.from_bytes(self.send_raw_command(0xC4, b'\x30'), byteorder = 'little', signed = True)
+
+    def set_toggle_play_mode(self) -> bytes:
+        """
+        00 00 00 00 seq play
+        01 00 00 00 repeat all
+        02 00 00 00 repeat single
+        03 00 00 00 radom play
+        """
+        return self.send_raw_command(0xC4, b'\x31')
+
+    def set_volume_down(self) -> bytes:
+        return self.send_raw_command(0xC5, b'\x30')
+
+    def set_volume_up(self) -> bytes:
+        return self.send_raw_command(0xC5, b'\x31')
+
+    def get_play_status(self) -> bytes:
+        """
+        FF FF FF FF no file
+        00 00 00 00 invalid
+        01 00 00 00 play
+        02 00 00 00 pause
+        03 00 00 00 stop
+        04 00 00 00 pareSync
+        05 00 00 00 pareComplete
+        06 00 00 00 Complete
+        """
+        return self.send_raw_command(0xC6)
+
+    def get_current_file_length(self) -> int:
+        """
+        A8 27 03 00 00 00 00 00 = 3"26' = 206760ms
+        """
+        return int.from_bytes(self.send_raw_command(0xC8), byteorder = 'little', signed = True)
+
+    def get_current_file_position(self) -> int:
+        """
+        2A 7F 00 00 00 00 00 00 = 32' = 32554ms
+        """
+        return int.from_bytes(self.send_raw_command(0xC9), byteorder = 'little', signed = True)
+
+    def get_current_file_name(self) -> str:
+        """
+        File name in UTF-8
+        30 32 20 52 45 56 45 52 01 = 02 REVER
+        """
+        return self.send_raw_command(0xCA).decode('utf-8')
+
+    def get_current_room_info(self) -> str:
+        """
+        File name in UTF-8
+        72 6F 6F 6D 3A 3A 37 38 32 = room::782
+        """
+        return self.send_raw_command(0xCB).decode('utf-8')
+
+    def set_current_file_position(self, pos: int = 0) -> bytes:
+        """
+        75 66 00 00 = 26' = 26229ms
+        """
+        return self.send_raw_command(0xCC, pos.to_bytes(length = 8, byteorder = 'little', signed = True))
+
+    def set_current_file_type(self, type: int = 0) -> bytes:
+        """
+        1：music   2：radio   3：video   4：image
+        """
+        return self.send_raw_command(0xCD, type.to_bytes(length = 4, byteorder = 'little', signed = True))
+
+    def get_current_list_file_account(self) -> int:
+        """
+        50 00 00 00 = 80
+        """
+        return int.from_bytes(self.send_raw_command(0xCE), byteorder = 'little', signed = True)
+
+    def get_current_list_file_info(self, num: int) -> str:
+        """
+        00 00 00 00 = first file
+        30 3A 3A E5 8C 97 E4 BA AC E7 88 B1 E5 AE B6 E5 B9 BF E6 92 AD 3A 3A 30 3A 3A = Name::length::Artist
+        """
+        return self.send_raw_command(0xCF, num.to_bytes(length = 4, byteorder = 'little', signed = True)).decode('utf-8')
+
+    def set_current_list_play_file(self, num: int) -> bytes:
+        """
+        00 00 00 00 = first file
+        """
+        return self.send_raw_command(0xD0, num.to_bytes(length = 4, byteorder = 'little', signed = True))
+
+    def get_current_file_artist(self) -> str:
+        """
+        44 65 6F 72 72 6F = Deorro
+        """
+        return self.send_raw_command(0xD1).decode('utf-8')
+
+    def set_volume_level(self, num: int) -> bytes:
+        """
+        level range 0--15
+        """
+        return self.send_raw_command(0xD2, num.to_bytes(length = 4, byteorder = 'little', signed = True))
+
+    def get_volume_level(self) -> int:
+        """
+        level range 0--15
+        """
+        return int.from_bytes(self.send_raw_command(0xD3), byteorder = 'little', signed = True)
+
+    def set_room_name(self, name: str) -> bytes:
+        """
+        room name in UTF-8
+        72 6F 6F 6D = room
+        """
+        return self.send_raw_command(0xD4, name.encode('utf-8'))
+
+    def set_room_number(self, number: int) -> bytes:
+        """
+        room number in UTF-8
+        00 00 00 31 = '1'
+        """
+        return self.send_raw_command(0xD5, str(number).encode('utf-8'))
+
+    def get_volume_source(self) -> int:
+        """
+        FF FF FF FF = -1
+        00 00 00 00 = Local
+        01 00 00 00 = ext1
+        02 00 00 00 = ext2
+        03 00 00 00 = BT
+        04 00 00 00 = UX
+        """
+        return int.from_bytes(self.send_raw_command(0xD6, (-1).to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
+
+    def set_volume_source(self, source: int) -> bytes:
+        """
+        FF FF FF FF = -1
+        00 00 00 00 = Local
+        01 00 00 00 = ext1
+        02 00 00 00 = ext2
+        03 00 00 00 = BT
+        04 00 00 00 = UX
+        """
+        return self.send_raw_command(0xD6, source.to_bytes(length = 4, byteorder = 'little', signed = True))
+
+    def get_sub_area_control(self, number: int) -> str:
+        """
+        number range 0--3
+        30 3A 3A 31 35 3A 3A 31 = '0::15::1' = area0, volume15, on
+        """
+        return self.send_raw_command(0xDC, number.to_bytes()).decode('utf-8')
+
+    def set_sub_area_control(self, number: int, volume: int, on: bool) -> bytes:
+        """
+        number range 0--3
+        30 3A 3A 31 35 3A 3A 31 = area1, volume15, on
+        """
+        send_data = '%d::%d::%d' % (number, volume, on)
+        return self.send_raw_command(0xDD, send_data.encode('utf-8'))
+
+    def get_eq_type(self) -> int:
+        """
+        00 00 00 00	nomal
+        01 00 00 00	rock
+        02 00 00 00	pop
+        03 00 00 00	dance
+        04 00 00 00	hihop
+        05 00 00 00	classic
+        06 00 00 00	bass
+        07 00 00 00	voice
+        """
+        return int.from_bytes(self.send_raw_command(0xDE), byteorder = 'little', signed = True)
+
+    def set_eq_type(self, type: int) -> bytes:
+        """
+        00 00 00 00	nomal
+        01 00 00 00	rock
+        02 00 00 00	pop
+        03 00 00 00	dance
+        04 00 00 00	hihop
+        05 00 00 00	classic
+        06 00 00 00	bass
+        07 00 00 00	voice
+        """
+        return self.send_raw_command(0xDF, type.to_bytes(length = 4, byteorder = 'little', signed = True))
+
+    def get_eq_switch(self) -> int:
+        """
+        00 00 00 00	off
+        01 00 00 00	on
+        """
+        return int.from_bytes(self.send_raw_command(0xE0), byteorder = 'little', signed = True)
+
+    def set_eq_switch(self, on: bool) -> bytes:
+        """
+        00 00 00 00	off
+        01 00 00 00	on
+        """
+        if on:
+            return self.send_raw_command(0xE1, (1).to_bytes(length = 4, byteorder = 'little', signed = True))
+        else:
+            return self.send_raw_command(0xE1, (0).to_bytes(length = 4, byteorder = 'little', signed = True))
+
+    def set_volume_toggle_mute(self) -> bytes:
+        return self.send_raw_command(0xE3)
