@@ -12,40 +12,47 @@ class FhwisePlayer:
         """new a Fhwise player."""
         self.addr = addr
         self.port = port
-        self._cmdid = 0
+        self._send_cmdid = 1
+        self._recv_cmdid = 1
 
     def connect(self):
         """Connect to Fhwise device."""
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp.bind(('0.0.0.0', self.port))
 
     def disconnect(self):
         """disconnect to Fhwise device."""
         self.udp.close()
-        self._cmdid = 0
+        self._send_cmdid = 1
+        self._recv_cmdid = 0
 
     def send_raw_command(self, command: int, payload: bytes = b'', ack: bool = True) -> bytes:
         """Send UDP data to Fhwise device."""
         send_raw = Message.build(dict(code=command, payload=payload,
-                                      cmdid=self._cmdid))
+                                      cmdid=self._send_cmdid))
         _LOGGER.debug('Send command to device: ' + bytes(send_raw).hex())
 
         self.udp.sendto(send_raw, (self.addr, self.port))
 
         if (ack):
+            _LOGGER.debug('start receive.')
             retval = b''
             recv_raw = self.udp.recv(1024)
+            _LOGGER.debug('Received from device: ' + bytes(recv_raw).hex())
             try:
                 recv = Message.parse(recv_raw)
-                if recv.cmdid == self._cmdid:
-                    retval = recv.payload
-                    self._cmdid += 1
-                    return retval
-                else:
-                    _LOGGER.warn('Received msg(%s) but id not match.' % (recv))
+                self._recv_cmdid = recv.cmdid
+                retval = recv.payload
+                self._send_cmdid += 1
+                if self._send_cmdid > 255:
+                    self._send_cmdid = 1
+                return retval
             except:
                 _LOGGER.error('Received invalid raw data(%s)' % (recv_raw))
 
-        self._cmdid += 1
+        self._send_cmdid += 1
+        if self._send_cmdid > 255:
+            self._send_cmdid = 1
         return b''
 
     def send_heartbeat(self) -> str:
@@ -85,7 +92,7 @@ class FhwisePlayer:
     def set_volume_up(self) -> bytes:
         return self.send_raw_command(0xC5, b'\x31')
 
-    def get_play_status(self) -> bytes:
+    def get_play_status(self) -> int:
         """
         FF FF FF FF no file
         00 00 00 00 invalid
@@ -96,7 +103,7 @@ class FhwisePlayer:
         05 00 00 00 pareComplete
         06 00 00 00 Complete
         """
-        return self.send_raw_command(0xC6)
+        return int.from_bytes(self.send_raw_command(0xC6), byteorder = 'little', signed = True)
 
     def get_current_file_length(self) -> int:
         """
@@ -128,7 +135,7 @@ class FhwisePlayer:
         """
         75 66 00 00 = 26' = 26229ms
         """
-        return self.send_raw_command(0xCC, pos.to_bytes(length = 8, byteorder = 'little', signed = True))
+        return self.send_raw_command(0xCC, pos.to_bytes(length = 4, byteorder = 'little', signed = True))
 
     def set_current_file_type(self, type: int = 0) -> bytes:
         """
@@ -214,7 +221,7 @@ class FhwisePlayer:
         number range 0--3
         30 3A 3A 31 35 3A 3A 31 = '0::15::1' = area0, volume15, on
         """
-        return self.send_raw_command(0xDC, number.to_bytes()).decode('utf-8')
+        return self.send_raw_command(0xDC, number.to_bytes(length = 4, byteorder = 'little', signed = True)).decode('utf-8')
 
     def set_sub_area_control(self, number: int, volume: int, on: bool) -> bytes:
         """
