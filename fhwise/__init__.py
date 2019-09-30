@@ -26,7 +26,7 @@ class FhwisePlayer:
         self._send_cmdid = 1
         self._recv_cmdid = 0
 
-    def send_raw_command(self, command: int, payload: bytes = b'', ack: bool = True) -> bytes:
+    def _send_raw_command(self, command: int, payload: bytes, ack: bool) -> bytes:
         """Send UDP data to Fhwise device."""
         send_raw = Message.build(dict(code=command, payload=payload,
                                       cmdid=self._send_cmdid))
@@ -54,6 +54,12 @@ class FhwisePlayer:
         if self._send_cmdid > 255:
             self._send_cmdid = 1
         return b''
+
+    def send_raw_command(self, command: int, payload: bytes = b'', ack: bool = True) -> bytes:
+        self.connect()
+        retval = self._send_raw_command(command, payload, ack)
+        self.disconnect()
+        return retval
 
     def send_heartbeat(self) -> str:
         """Return device model in UTF8"""
