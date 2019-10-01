@@ -8,7 +8,7 @@ setup(
     name='py-fhwise',
 
     version=__version__,
-    description='',
+    description='Control fhwise player though UDP socket',
     url='https://github.com/smarthomefans/py-fhwise',
 
     author='SchumyHao',
@@ -16,7 +16,7 @@ setup(
 
     license='MIT',
 
-    keywords='',
+    keywords='fhwise smarthome music-player player',
 
     packages=["fhwise"],
 
@@ -29,5 +29,10 @@ setup(
     ],
 
     entry_points={
+    },
+
+    project_urls={
+        'Bug Reports': 'https://github.com/smarthomefans/py-fhwise/issues/',
+        'Source': 'https://github.com/smarthomefans/py-fhwise/',
     },
 )
