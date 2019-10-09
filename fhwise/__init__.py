@@ -83,20 +83,20 @@ class FhwisePlayer:
         """
         return int.from_bytes(self.send_raw_command(0xC4, b'\x30'), byteorder = 'little', signed = True)
 
-    def set_toggle_play_mode(self) -> bytes:
+    def set_toggle_play_mode(self) -> int:
         """
         00 00 00 00 seq play
         01 00 00 00 repeat all
         02 00 00 00 repeat single
         03 00 00 00 radom play
         """
-        return self.send_raw_command(0xC4, b'\x31')
+        return int.from_bytes(self.send_raw_command(0xC4, b'\x31'), byteorder = 'little', signed = True)
 
-    def set_volume_down(self) -> bytes:
-        return self.send_raw_command(0xC5, b'\x30')
+    def set_volume_down(self) -> int:
+        return int.from_bytes(self.send_raw_command(0xC5, b'\x30'), byteorder = 'little', signed = True)
 
-    def set_volume_up(self) -> bytes:
-        return self.send_raw_command(0xC5, b'\x31')
+    def set_volume_up(self) -> int:
+        return int.from_bytes(self.send_raw_command(0xC5, b'\x31'), byteorder = 'little', signed = True)
 
     def get_play_status(self) -> int:
         """
@@ -137,17 +137,17 @@ class FhwisePlayer:
         """
         return self.send_raw_command(0xCB).decode('utf-8')
 
-    def set_current_file_position(self, pos: int = 0) -> bytes:
+    def set_current_file_position(self, pos: int = 0) -> int:
         """
         75 66 00 00 = 26' = 26229ms
         """
-        return self.send_raw_command(0xCC, pos.to_bytes(length = 4, byteorder = 'little', signed = True))
+        return int.from_bytes(self.send_raw_command(0xCC, pos.to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
-    def set_current_file_type(self, type: int = 0) -> bytes:
+    def set_current_file_type(self, type: int = 0) -> int:
         """
         1：music   2：radio   3：video   4：image
         """
-        return self.send_raw_command(0xCD, type.to_bytes(length = 4, byteorder = 'little', signed = True))
+        return int.from_bytes(self.send_raw_command(0xCD, type.to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
     def get_current_list_file_account(self) -> int:
         """
@@ -162,11 +162,11 @@ class FhwisePlayer:
         """
         return self.send_raw_command(0xCF, num.to_bytes(length = 4, byteorder = 'little', signed = True)).decode('utf-8')
 
-    def set_current_list_play_file(self, num: int) -> bytes:
+    def set_current_list_play_file(self, num: int) -> int:
         """
         00 00 00 00 = first file
         """
-        return self.send_raw_command(0xD0, num.to_bytes(length = 4, byteorder = 'little', signed = True))
+        return int.from_bytes(self.send_raw_command(0xD0, num.to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
     def get_current_file_artist(self) -> str:
         """
@@ -174,11 +174,11 @@ class FhwisePlayer:
         """
         return self.send_raw_command(0xD1).decode('utf-8')
 
-    def set_volume_level(self, num: int) -> bytes:
+    def set_volume_level(self, num: int) -> int:
         """
         level range 0--15
         """
-        return self.send_raw_command(0xD2, num.to_bytes(length = 4, byteorder = 'little', signed = True))
+        return int.from_bytes(self.send_raw_command(0xD2, num.to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
     def get_volume_level(self) -> int:
         """
@@ -186,19 +186,19 @@ class FhwisePlayer:
         """
         return int.from_bytes(self.send_raw_command(0xD3), byteorder = 'little', signed = True)
 
-    def set_room_name(self, name: str) -> bytes:
+    def set_room_name(self, name: str) -> str:
         """
         room name in UTF-8
         72 6F 6F 6D = room
         """
-        return self.send_raw_command(0xD4, name.encode('utf-8'))
+        return self.send_raw_command(0xD4, name.encode('utf-8')).decode('utf-8')
 
-    def set_room_number(self, number: int) -> bytes:
+    def set_room_number(self, number: int) -> int:
         """
         room number in UTF-8
         00 00 00 31 = '1'
         """
-        return self.send_raw_command(0xD5, str(number).encode('utf-8'))
+        return int(self.send_raw_command(0xD5, str(number).encode('utf-8')).decode('utf-8'))
 
     def get_volume_source(self) -> int:
         """
@@ -220,7 +220,7 @@ class FhwisePlayer:
         03 00 00 00 = BT
         04 00 00 00 = UX
         """
-        return self.send_raw_command(0xD6, source.to_bytes(length = 4, byteorder = 'little', signed = True))
+        return int.from_bytes(self.send_raw_command(0xD6, source.to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
     def get_sub_area_control(self, number: int) -> str:
         """
@@ -229,13 +229,13 @@ class FhwisePlayer:
         """
         return self.send_raw_command(0xDC, number.to_bytes(length = 4, byteorder = 'little', signed = True)).decode('utf-8')
 
-    def set_sub_area_control(self, number: int, volume: int, on: bool) -> bytes:
+    def set_sub_area_control(self, number: int, volume: int, on: bool) -> str:
         """
         number range 0--3
         30 3A 3A 31 35 3A 3A 31 = area1, volume15, on
         """
         send_data = '%d::%d::%d' % (number, volume, on)
-        return self.send_raw_command(0xDD, send_data.encode('utf-8'))
+        return self.send_raw_command(0xDD, send_data.encode('utf-8')).decode('utf-8')
 
     def get_eq_type(self) -> int:
         """
@@ -252,7 +252,7 @@ class FhwisePlayer:
 
     def set_eq_type(self, type: int) -> bytes:
         """
-        00 00 00 00	nomal
+        00 00 00 00	normal
         01 00 00 00	rock
         02 00 00 00	pop
         03 00 00 00	dance
@@ -261,7 +261,7 @@ class FhwisePlayer:
         06 00 00 00	bass
         07 00 00 00	voice
         """
-        return self.send_raw_command(0xDF, type.to_bytes(length = 4, byteorder = 'little', signed = True))
+        return int.from_bytes(self.send_raw_command(0xDF, type.to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
     def get_eq_switch(self) -> int:
         """
@@ -270,15 +270,15 @@ class FhwisePlayer:
         """
         return int.from_bytes(self.send_raw_command(0xE0), byteorder = 'little', signed = True)
 
-    def set_eq_switch(self, on: bool) -> bytes:
+    def set_eq_switch(self, on: bool) -> int:
         """
         00 00 00 00	off
         01 00 00 00	on
         """
         if on:
-            return self.send_raw_command(0xE1, (1).to_bytes(length = 4, byteorder = 'little', signed = True))
+            return int.from_bytes(self.send_raw_command(0xE1, (1).to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
         else:
-            return self.send_raw_command(0xE1, (0).to_bytes(length = 4, byteorder = 'little', signed = True))
+            return int.from_bytes(self.send_raw_command(0xE1, (0).to_bytes(length = 4, byteorder = 'little', signed = True)), byteorder = 'little', signed = True)
 
     def set_volume_toggle_mute(self) -> bytes:
         return self.send_raw_command(0xE3)
