@@ -1,17 +1,20 @@
 import socket
 import logging
 import struct
+import select
 from .protocol import Message
 
 _LOGGER = logging.getLogger(__name__)
+UDP_RECV_TIMEOUT_S=3
 
 class FhwisePlayer:
     """Control Fhwise player though UDP."""
 
-    def __init__(self, addr: str, port: int = 8080) -> None:
+    def __init__(self, addr: str, port: int = 8080, timeout: int = UDP_RECV_TIMEOUT_S) -> None:
         """new a Fhwise player."""
         self.addr = addr
         self.port = port
+        self._timeout = timeout
         self._send_cmdid = 1
         self._recv_cmdid = 1
 
@@ -19,6 +22,7 @@ class FhwisePlayer:
         """Connect to Fhwise device."""
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp.bind(('0.0.0.0', self.port))
+        self.udp.setblocking(0)
 
     def disconnect(self):
         """disconnect to Fhwise device."""
@@ -36,19 +40,23 @@ class FhwisePlayer:
 
         if (ack):
             _LOGGER.debug('start receive.')
-            retval = b''
-            recv_raw = self.udp.recv(1024)
-            _LOGGER.debug('Received from device: ' + bytes(recv_raw).hex())
-            try:
-                recv = Message.parse(recv_raw)
-                self._recv_cmdid = recv.cmdid
-                retval = recv.payload
-                self._send_cmdid += 1
-                if self._send_cmdid > 255:
-                    self._send_cmdid = 1
-                return retval
-            except:
-                _LOGGER.error('Received invalid raw data(%s)' % (recv_raw))
+            ready = select.select([self.udp], [], [], self._timeout)
+            if ready[0]:
+                retval = b''
+                recv_raw = self.udp.recv(1024)
+                _LOGGER.debug('Received from device: ' + bytes(recv_raw).hex())
+                try:
+                    recv = Message.parse(recv_raw)
+                    self._recv_cmdid = recv.cmdid
+                    retval = recv.payload
+                    self._send_cmdid += 1
+                    if self._send_cmdid > 255:
+                        self._send_cmdid = 1
+                    return retval
+                except:
+                    _LOGGER.error('Received invalid raw data(%s)' % (recv_raw))
+            else:
+                _LOGGER.error('Received timeout')
 
         self._send_cmdid += 1
         if self._send_cmdid > 255:
