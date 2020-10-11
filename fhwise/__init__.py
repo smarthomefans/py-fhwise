@@ -56,7 +56,7 @@ class FhwisePlayer:
                 except:
                     _LOGGER.error('Received invalid raw data(%s)' % (recv_raw))
             else:
-                _LOGGER.error('Received timeout')
+                raise Exception('Received timeout')
 
         self._send_cmdid += 1
         if self._send_cmdid > 255:
